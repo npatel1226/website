@@ -1,0 +1,233 @@
+---
+title: "Project 2"
+author: "Neha Patel"
+date: 2019-11-20
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+# 0. Dataset
+```{r}
+data(package = .packages(all.available = TRUE))
+library(hexbin)
+data(NHANES)
+library(dplyr)
+library("devtools")
+library("pipeR")
+library("tidyverse")
+library("tidyr")
+NHANES1<-na.omit(NHANES)
+
+```
+
+I used the dataset NHANES (National Health and Nutrition Examination Survey). I used the variables Cancer.Incidence (categorical and binary), Age (numeric), BMI (numeric), and Hemoglobin (numeric). I wanted to determine if Age, BMI, Race, and Hemoglobin had an impact or not the chances of cancer occuring.
+
+
+# 1. MANOVA
+```{r}
+man1<-manova(cbind(Age,BMI, Race, Hemoglobin)~Cancer.Incidence, data=NHANES1)
+summary(man1)
+summary.aov(man1)
+NHANES1%>%group_by(Cancer.Incidence)%>%summarize(mean(Age), mean(BMI), mean(Race), mean(Hemoglobin))
+```
+When cancer was not present, the mean age difference was 50.6, the mean BMI difference was 25.9, mean Race difference was 0.8, and mean Hemoglobin difference was 15.5. When cancer did occur, the mean age difference was 62.6, the mean BMI difference was 25.4, mean Race difference was 0.8, and mean Hemoglobin difference was 15.3. There is not a very large difference in the mean differences for these variables when cancer occurs and does not occur. MANOVA was conducted to determine the effects of Age, BMI, Race, and Hemoglobin levels on Cancer Incidence and see if they differ from each other based on if cancer was present or not. The Pillai trace was 0.062, F(4,2890)=48.13, p<2.2e-16. The MANOVA indicated significant univariate; the univariate ANOVAs were significant for Age (F(1,2893)=189.87 while p<2.2e-16), BMI (F(1,2893)=3.89 while p=0.048), and Hemoblobin (F(1,2893)=6.177 while p=0.013), but not for Race (F(1,2893)=1.065 while p=0.3022). There were a total of 5 tests that were ran, becuase only 1 MANOVA was ran with 1 categorical variable that had 2 levels and 4 numeric variables. The probability of making a type 1 error is 1-(0.95^5)=0.2262191, so the Boneferroni adjusted significance level is 0.2262191/5=0.04524382. Thus, the variable Race is not significant. Assumptions include having multivariate normality betweeen dependent variables, equal covariance between them, and no multicollinearility. They are not likely to have been met, since these variables do not seem to be correlated with each other. 
+
+
+#2. Randomization Test
+```{r}
+t.test(data=NHANES1,Age~Cancer.Incidence)
+t.test(data=NHANES1, BMI~Cancer.Incidence)
+t.test(data=NHANES1,Race~Cancer.Incidence)
+t.test(data=NHANES1,Hemoglobin~Cancer.Incidence)
+t<-vector()
+for(i in 1:10000){
+  samp<-rnorm(25,mean=5)
+  t[i] <- (mean(samp)-5)/(sd(samp)/sqrt(25))
+}
+data.frame(t)%>%
+ggplot(aes(t))+geom_histogram(aes(y=..density..), bins=30)+
+  stat_function(fun=dt,args=list(df=24),geom="line") +geom_abline(col="red")
+
+
+
+```
+Independent-sample t tests were conducted for comparision. Null hypotheis is that the true difference in means is equal to 0. The alternative hypothesis is the true difference in means is not equal to 0. According to the test results, the p-value is significant for Age and BMI so we reject the null hypothesis for both and conclude that the true differnce in means is not equal to 0 between age and cancer incidence and between BMI and cancer incidence. The means of the two samples are signifincantly different. On the other hand, the p-value is not significant for Race and Hemoglobin so we accept the null hypothesis and conclude that the true difference in their means is equal to 0. The plot shows a null distribution where the mean difference is 0. 
+
+
+
+#3. Linear Regression Model 
+```{r}
+
+NHANES1$Hemoglobin_c<- NHANES1$Hemoglobin-mean(NHANES1$Hemoglobin)
+NHANES1$BMI_c <- NHANES1$BMI-mean(NHANES1$BMI)
+fit <-lm(Hemoglobin_c ~ BMI_c * Cancer.Incidence, data = NHANES1)
+summary(fit)
+ggplot(NHANES1, aes(x=Hemoglobin, y=BMI,group=Cancer.Incidence))+geom_point(aes(color=Cancer.Incidence))+
+ geom_smooth(method="lm",formula=y~1,se=F,fullrange=T,aes(color=Cancer.Incidence))+theme(legend.position=c(.9,.19))+xlab("Age")
+#linearity, homoskedasticity 
+resids<-fit$residuals
+fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, color='red')
+#normality 
+ggplot()+geom_histogram(aes(resids), bins=20)
+#robust SE
+library(lmtest)
+library(sandwich)
+coeftest(fit, vcov=vcovHC(fit))[,1:2]
+#proportion of variation explained by model
+summary(fit)$r.sq
+#likelihood ratio test
+model1 <- lm(Hemoglobin_c ~ Cancer.Incidence,data = NHANES1)
+model2 <- lm(BMI_c ~ Cancer.Incidence,data = NHANES1)
+lrtest (model1, model2)
+
+```
+Controlling for Hemoglobin, there is significant effect of BMI on cancer incidence. For every one unit increase in Hemoglobin, cancer incidence increases by 0.03.The intercept value explains Hemoglobin when Cancer Incidence and BMI is 0. Having cancer will decrease your Hemoglobin levels by 0.155 compared to when you don't have cancer. The interaction explains if the effect of Hemoglobin levels on BMI differs by cancer incidence. All assumptions are not met because the plots for linearity and homoskedasticity are not normal. Points are clustered rather than spread. The plot for normality meets the assumtpion of normal distribution however is still skewed to one side over another. There was no difference in regression results with robust standard errors.This model explains 0.0177154 of of the variation in the outcome. The likelihood ratio test also shows significance of BMI on Cancer incidence. 
+
+
+#4. Regression Model with Bootstrapped Standard Errors 
+```{r}
+
+fit <-lm(Hemoglobin_c ~ BMI_c * Cancer.Incidence, data = NHANES1)
+summary(fit)
+#boostrap residuals 
+ resids<-fit$residuals 
+ fitted<-fit$fitted.values 
+ resid_resamp<-replicate(5000,{
+ new_resids<-sample(resids,replace=TRUE) 
+ NHANES1$new_y<-fitted+new_resids 
+ fit1<-lm(new_y~Hemoglobin_c*BMI_c+Cancer.Incidence,data=NHANES1) 
+ coef(fit1) 
+})
+ resid_resamp%>%t%>%as.data.frame%>%summarize_all(sd)
+
+
+```
+Bootstrapping uses resampling from the data in order to determine the sampling distribution of an estimate. There are significant differences in SEs and p-values compared to the original values. The intercept increased to 0.018128. 
+
+#5. Logistic Regression
+```{r}
+library(tidyverse); library(MASS); library(lmtest); library(microbenchmark)
+
+class_diag<-function(probs,truth){
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+  
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  TPR=cumsum(truth)/max(1,sum(truth))
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+  data.frame(acc,sens,spec,ppv,auc)
+}
+
+fit2<-glm(Cancer.Incidence ~ Age+ BMI + Hemoglobin + Race, data= NHANES1, family ="binomial") 
+coeftest(fit2)
+prob<- predict(fit2, type = "response")
+class_diag(prob, NHANES1$Cancer.Incidence)
+table(predict = as.numeric(prob>0.5), truth = NHANES1$Cancer.Incidence)%>%addmargins
+
+ggplot(NHANES1, aes(Age+ BMI + Hemoglobin + Race, prob))+ geom_point(aes(color = Cancer.Incidence), alpha = .5, size =.3) + geom_rug(aes(color = Cancer.Incidence), sides = "right") + geom_hline(yintercept = .5)
+
+##ROC Curve
+sens<- function(p, data = NHANES1, y = Cancer.Incidence) 
+mean(NHANES1[NHANES1$Cancer.Incidence==1,]$prob>p) 
+
+spec<- function(p,data=NHANES1, y=Cancer.Incidence) 
+mean(NHANES1[NHANES1$Cancer.Incidence==0,]$prob<p)
+
+sensitivity<- sapply(seq(0,1,.01), sens, NHANES1)
+specificity<- sapply(seq(0,1,.01), spec, NHANES1)
+
+ROC1<- data.frame(sensitivity, specificity, cutoff = seq(0,1,.01))
+ROC1$TPR<- sensitivity
+ROC1$FPR<- 1- specificity
+ROC1%>%ggplot(aes(FPR, TPR))+geom_path(size = 1.5) + geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), lty = 2) + scale_x_continuous(limits = c(0,1))
+library(plotROC)
+ROCplot<-ggplot(NHANES1)+geom_roc(aes(d=Cancer.Incidence,m=Age+ BMI + Hemoglobin + Race), n.cuts=0) 
+calc_auc(ROCplot)
+
+odds<-function(p)p/(1-p)
+p<-seq(0,1,by=.1)
+cbind(p, odds=odds(p))%>%round(4)
+logit<-function(p)log(odds(p))
+cbind(p, odds=odds(p),logit=logit(p))%>%round(4)
+
+NHANES1$logit<-predict(fit2) #get predicted log-odds
+NHANES1$outcome<-factor(NHANES1$Cancer.Incidence,levels=c("Yes","No"))
+ggplot(NHANES1,aes(logit, fill=as.factor(Cancer.Incidence)))+geom_density(alpha=.3)+
+geom_vline(xintercept=0,lty=2)
+
+
+#10 fold CV
+
+
+set.seed(1234) 
+k = 10
+data1 <- NHANES1[sample(nrow(NHANES1)), ]
+folds <- cut(seq(1:nrow(NHANES1)), breaks = k, labels = F) 
+diag <- NULL
+for (i in 1:k) {
+  train <- data1[folds != i, ]
+  test <- data1[folds == i, ]
+  truth <- test$Cancer.Incidence
+  fit4 <- glm(Cancer.Incidence ~ Age+ BMI + Hemoglobin + Race , data = train, family = "binomial") 
+  probs <- predict(fit4, newdata = test, type = "response") 
+  preds <- ifelse(probs > 0.5, 1, 0)
+  diags <- rbind(diag, class_diag(probs, truth)) 
+}
+diags %>% summarize_all(mean)
+summary(fit4)
+```
+
+Interaction between age and cancer incidence is significant. For no cancer, odds for agre are 0.00618 while for incidence of cancer, log odds are 1.0677 times while for cancer, odds for age are 0.00659.Confusion matrix shows the model predictions against the true values. For this model, Accuracy is 0.888, Sensitivity is 0, Specificity is 1, Precision was NaN, and AUC was 0.725.An ROC curve shows Sensitivity would be 1 while Specificity would be 0. AUC resulting from the curve is 0.711, which is less than that of the confusion matrix. A 10 fold cross validation was done to divide the dataset and perform a test on a proportion of it a repreasted number of times. The Accuracy is 0.888,Sensitivity is 0, Specificity is 1, Precision s NaN, and AUC is 0.7208. The accuracy, sensitivity, specificity, and precision remained the same; AUC was also very similar, but decreased slightly. 
+
+
+#6. LASSO Regression
+```{r}
+library(glmnet)
+y <- as.matrix(NHANES1$Cancer.Incidence)
+x<-NHANES1%>%dplyr::select(Age,BMI, Hemoglobin,Race, Weight,Diet.Iron,Transferin)%>%mutate_all(scale)%>%as.matrix
+cv1 <- cv.glmnet(x, y, family = "binomial")
+lasso1 <- glmnet(x, y, family = "binomial", lambda = cv1$lambda.1se) 
+coef(lasso1)
+
+
+set.seed(1234)
+k=10 
+data2<-NHANES1[sample(nrow(NHANES1)),] 
+folds<-cut(seq(1:nrow(NHANES1)),breaks=k,labels=F) 
+diags<-NULL
+for(i in 1:k){
+  train<-data2[folds!=i,]
+  test<-data2[folds==i,]
+  truth<-test$Cancer.Incidence
+  fit5<-glm(Cancer.Incidence~Age,data=NHANES1,family="binomial")
+  probs<-predict(fit5,newdata = test,type="response")
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+ apply(diags,2,mean)
+
+summary(fit5)
+
+```
+Only the variable age is retained after doing a LASSO regression, which means that it is the only significant predictor of Cancer.Incidence amongst all the other variables. Although the AUC slightly decreased, the accuracy remained the same compared to the logistic regression in part 5. 

@@ -1,0 +1,17 @@
+---
+title: Why am I interested in Python?
+author: Neha Patel
+date: '2019-12-12'
+slug: python
+categories: []
+tags: []
+description: ''
+---
+
+The interesting part of Python is that this software can be used on multiple platforms, such as RStudio. This makes it more convenient and easier to use as well. 
+
+Python is a very functional and easy language to use once you get familar to the software.
+
+Many companies use this versatile language since it is so well-structured. 
+
+![Python is a high level programming language](/blog/2019-12-12-python_files/do-python-coding-and-jenkins-setup.png.jpeg)

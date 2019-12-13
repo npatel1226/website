@@ -1,0 +1,1060 @@
+---
+title: "Project 1"
+author: "Neha Patel"
+date: 2019-10-20
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+
+<div id="r-markdown" class="section level2">
+<h2>R Markdown</h2>
+<p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
+<p>When you click the <strong>Knit</strong> button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:</p>
+<p>##Introduction</p>
+<p>I chose the datasets “lung” and “Melanoma” becuase I thought it would be interesting to compare the data of 2 different types of cancers. Melanoma contained variables like tumor thickness and presence/ansence of ulcers, while lung contained variables like ECOG and Karnofsky performance scores and weight loss. However the variables I was interested in were the following numerical variables-age (of patient), time (survival time), and status (dead or alive). I wanted to see the relationship age would have on the survival rates. I expect to see a relationship in which less survival rates as age increases.</p>
+<p>#Tidying and Joining</p>
+<pre class="r"><code>data(package = .packages(all.available = TRUE))</code></pre>
+<pre><code>## Warning in data(package = .packages(all.available = TRUE)): datasets have
+## been moved from package &#39;base&#39; to package &#39;datasets&#39;</code></pre>
+<pre><code>## Warning in data(package = .packages(all.available = TRUE)): datasets have
+## been moved from package &#39;stats&#39; to package &#39;datasets&#39;</code></pre>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(&quot;devtools&quot;)</code></pre>
+<pre><code>## Loading required package: usethis</code></pre>
+<pre class="r"><code>library(&quot;pipeR&quot;)
+library(&quot;tidyverse&quot;)</code></pre>
+<pre><code>## ── Attaching packages ──────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.2.1     ✔ readr   1.3.1
+## ✔ tibble  2.1.3     ✔ purrr   0.3.3
+## ✔ tidyr   1.0.0     ✔ stringr 1.4.0
+## ✔ ggplot2 3.2.1     ✔ forcats 0.4.0</code></pre>
+<pre><code>## ── Conflicts ─────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(&quot;tidyr&quot;)
+library(survival)
+data(lung)
+library(MASS)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;MASS&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     select</code></pre>
+<pre class="r"><code>data(&quot;Melanoma&quot;)
+Melanoma %&gt;% pivot_wider(names_from=&quot;status&quot;, values_from=&quot;age&quot;)</code></pre>
+<pre><code>## # A tibble: 205 x 8
+##     time   sex  year thickness ulcer   `3`   `2`   `1`
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt;     &lt;dbl&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;
+##  1    10     1  1972      6.76     1    76    NA    NA
+##  2    30     1  1968      0.65     0    56    NA    NA
+##  3    35     1  1977      1.34     0    NA    41    NA
+##  4    99     0  1968      2.9      0    71    NA    NA
+##  5   185     1  1965     12.1      1    NA    NA    52
+##  6   204     1  1971      4.84     1    NA    NA    28
+##  7   210     1  1972      5.16     1    NA    NA    77
+##  8   232     0  1974      3.22     1    60    NA    NA
+##  9   232     1  1968     12.9      1    NA    NA    49
+## 10   279     0  1971      7.41     1    NA    NA    68
+## # … with 195 more rows</code></pre>
+<pre class="r"><code>melanomauntidy &lt;-Melanoma %&gt;% pivot_wider(names_from=&quot;status&quot;, values_from=&quot;age&quot;)
+melanomauntidy %&gt;% pivot_longer(c(&quot;3&quot;, &quot;2&quot;, &quot;1&quot;), names_to=&quot;status&quot;, values_to=&quot;age&quot;)</code></pre>
+<pre><code>## # A tibble: 615 x 7
+##     time   sex  year thickness ulcer status   age
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt;     &lt;dbl&gt; &lt;int&gt; &lt;chr&gt;  &lt;int&gt;
+##  1    10     1  1972      6.76     1 3         76
+##  2    10     1  1972      6.76     1 2         NA
+##  3    10     1  1972      6.76     1 1         NA
+##  4    30     1  1968      0.65     0 3         56
+##  5    30     1  1968      0.65     0 2         NA
+##  6    30     1  1968      0.65     0 1         NA
+##  7    35     1  1977      1.34     0 3         NA
+##  8    35     1  1977      1.34     0 2         41
+##  9    35     1  1977      1.34     0 1         NA
+## 10    99     0  1968      2.9      0 3         71
+## # … with 605 more rows</code></pre>
+<pre class="r"><code>melanomatidy &lt;-melanomauntidy %&gt;% pivot_longer(c(&quot;3&quot;, &quot;2&quot;, &quot;1&quot;), names_to=&quot;status&quot;, values_to=&quot;age&quot;)
+lung %&gt;% pivot_wider(names_from = &quot;status&quot;, values_from = &quot;age&quot;)</code></pre>
+<pre><code>## # A tibble: 228 x 10
+##     inst  time   sex ph.ecog ph.karno pat.karno meal.cal wt.loss   `2`
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
+##  1     3   306     1       1       90       100     1175      NA    74
+##  2     3   455     1       0       90        90     1225      15    68
+##  3     3  1010     1       0       90        90       NA      15    NA
+##  4     5   210     1       1       90        60     1150      11    57
+##  5     1   883     1       0      100        90       NA       0    60
+##  6    12  1022     1       1       50        80      513       0    NA
+##  7     7   310     2       2       70        60      384      10    68
+##  8    11   361     2       2       60        80      538       1    71
+##  9     1   218     1       1       70        80      825      16    53
+## 10     7   166     1       2       70        70      271      34    61
+## # … with 218 more rows, and 1 more variable: `1` &lt;dbl&gt;</code></pre>
+<pre class="r"><code>lunguntidy &lt;-lung %&gt;% pivot_wider(names_from = &quot;status&quot;, values_from = &quot;age&quot;)
+lunguntidy %&gt;% pivot_longer(c(&quot;2&quot;, &quot;1&quot;), names_to=&quot;status&quot;, values_to=&quot;age&quot;)</code></pre>
+<pre><code>## # A tibble: 456 x 10
+##     inst  time   sex ph.ecog ph.karno pat.karno meal.cal wt.loss status
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt; 
+##  1     3   306     1       1       90       100     1175      NA 2     
+##  2     3   306     1       1       90       100     1175      NA 1     
+##  3     3   455     1       0       90        90     1225      15 2     
+##  4     3   455     1       0       90        90     1225      15 1     
+##  5     3  1010     1       0       90        90       NA      15 2     
+##  6     3  1010     1       0       90        90       NA      15 1     
+##  7     5   210     1       1       90        60     1150      11 2     
+##  8     5   210     1       1       90        60     1150      11 1     
+##  9     1   883     1       0      100        90       NA       0 2     
+## 10     1   883     1       0      100        90       NA       0 1     
+## # … with 446 more rows, and 1 more variable: age &lt;dbl&gt;</code></pre>
+<pre class="r"><code>lungtidy &lt;-lunguntidy %&gt;% pivot_longer(c(&quot;2&quot;, &quot;1&quot;), names_to=&quot;status&quot;, values_to=&quot;age&quot;)
+Melanoma %&gt;% right_join (lung)</code></pre>
+<pre><code>## Joining, by = c(&quot;time&quot;, &quot;status&quot;, &quot;sex&quot;, &quot;age&quot;)</code></pre>
+<pre><code>##     time status sex age year thickness ulcer inst ph.ecog ph.karno
+## 1    306      2   1  74   NA        NA    NA    3       1       90
+## 2    455      2   1  68   NA        NA    NA    3       0       90
+## 3   1010      1   1  56   NA        NA    NA    3       0       90
+## 4    210      2   1  57   NA        NA    NA    5       1       90
+## 5    883      2   1  60   NA        NA    NA    1       0      100
+## 6   1022      1   1  74   NA        NA    NA   12       1       50
+## 7    310      2   2  68   NA        NA    NA    7       2       70
+## 8    361      2   2  71   NA        NA    NA   11       2       60
+## 9    218      2   1  53   NA        NA    NA    1       1       70
+## 10   166      2   1  61   NA        NA    NA    7       2       70
+## 11   170      2   1  57   NA        NA    NA    6       1       80
+## 12   654      2   2  68   NA        NA    NA   16       2       70
+## 13   728      2   2  68   NA        NA    NA   11       1       90
+## 14    71      2   1  60   NA        NA    NA   21      NA       60
+## 15   567      2   1  57   NA        NA    NA   12       1       80
+## 16   144      2   1  67   NA        NA    NA    1       1       80
+## 17   613      2   1  70   NA        NA    NA   22       1       90
+## 18   707      2   1  63   NA        NA    NA   16       2       50
+## 19    61      2   2  56   NA        NA    NA    1       2       60
+## 20    88      2   1  57   NA        NA    NA   21       1       90
+## 21   301      2   1  67   NA        NA    NA   11       1       80
+## 22    81      2   2  49   NA        NA    NA    6       0      100
+## 23   624      2   1  50   NA        NA    NA   11       1       70
+## 24   371      2   1  58   NA        NA    NA   15       0       90
+## 25   394      2   1  72   NA        NA    NA   12       0       90
+## 26   520      2   2  70   NA        NA    NA   12       1       90
+## 27   574      2   1  60   NA        NA    NA    4       0      100
+## 28   118      2   1  70   NA        NA    NA   13       3       60
+## 29   390      2   1  53   NA        NA    NA   13       1       80
+## 30    12      2   1  74   NA        NA    NA    1       2       70
+## 31   473      2   2  69   NA        NA    NA   12       1       90
+## 32    26      2   1  73   NA        NA    NA    1       2       60
+## 33   533      2   1  48   NA        NA    NA    7       2       60
+## 34   107      2   2  60   NA        NA    NA   16       2       50
+## 35    53      2   1  61   NA        NA    NA   12       2       70
+## 36   122      2   2  62   NA        NA    NA    1       2       50
+## 37   814      2   1  65   NA        NA    NA   22       2       70
+## 38   965      1   2  66   NA        NA    NA   15       1       70
+## 39    93      2   1  74   NA        NA    NA    1       2       50
+## 40   731      2   2  64   NA        NA    NA    1       1       80
+## 41   460      2   1  70   NA        NA    NA    5       1       80
+## 42   153      2   2  73   NA        NA    NA   11       2       60
+## 43   433      2   2  59   NA        NA    NA   10       0       90
+## 44   145      2   2  60   NA        NA    NA   12       2       70
+## 45   583      2   1  68   NA        NA    NA    7       1       60
+## 46    95      2   2  76   NA        NA    NA    7       2       60
+## 47   303      2   1  74   NA        NA    NA    1       0       90
+## 48   519      2   1  63   NA        NA    NA    3       1       80
+## 49   643      2   1  74   NA        NA    NA   13       0       90
+## 50   765      2   2  50   NA        NA    NA   22       1       90
+## 51   735      2   2  72   NA        NA    NA    3       1       90
+## 52   189      2   1  63   NA        NA    NA   12       0       80
+## 53    53      2   1  68   NA        NA    NA   21       0       90
+## 54   246      2   1  58   NA        NA    NA    1       0      100
+## 55   689      2   1  59   NA        NA    NA    6       1       90
+## 56    65      2   1  62   NA        NA    NA    1       0       90
+## 57     5      2   2  65   NA        NA    NA    5       0      100
+## 58   132      2   1  57   NA        NA    NA   22       2       70
+## 59   687      2   2  58   NA        NA    NA    3       1       80
+## 60   345      2   2  64   NA        NA    NA    1       1       90
+## 61   444      2   2  75   NA        NA    NA   22       2       70
+## 62   223      2   1  48   NA        NA    NA   12       1       90
+## 63   175      2   1  73   NA        NA    NA   21       1       80
+## 64    60      2   2  65   NA        NA    NA   11       1       90
+## 65   163      2   1  69   NA        NA    NA    3       1       80
+## 66    65      2   1  68   NA        NA    NA    3       2       70
+## 67   208      2   2  67   NA        NA    NA   16       2       70
+## 68   821      1   2  64   NA        NA    NA    5       0       90
+## 69   428      2   1  68   NA        NA    NA   22       0      100
+## 70   230      2   1  67   NA        NA    NA    6       1       80
+## 71   840      1   1  63   NA        NA    NA   13       0       90
+## 72   305      2   2  48   NA        NA    NA    3       1       80
+## 73    11      2   1  74   NA        NA    NA    5       2       70
+## 74   132      2   1  40   NA        NA    NA    2       1       80
+## 75   226      2   2  53   NA        NA    NA   21       1       90
+## 76   426      2   2  71   NA        NA    NA   12       1       90
+## 77   705      2   2  51   NA        NA    NA    1       0      100
+## 78   363      2   2  56   NA        NA    NA    6       1       80
+## 79    11      2   1  81   NA        NA    NA    3       0       90
+## 80   176      2   1  73   NA        NA    NA    1       0       90
+## 81   791      2   1  59   NA        NA    NA    4       0      100
+## 82    95      2   1  55   NA        NA    NA   13       1       70
+## 83   196      1   1  42   NA        NA    NA   11       1       80
+## 84   167      2   2  44   NA        NA    NA   21       1       80
+## 85   806      1   1  44   NA        NA    NA   16       1       80
+## 86   284      2   1  71   NA        NA    NA    6       1       80
+## 87   641      2   2  62   NA        NA    NA   22       1       80
+## 88   147      2   1  61   NA        NA    NA   21       0      100
+## 89   740      1   2  44   NA        NA    NA   13       1       90
+## 90   163      2   1  72   NA        NA    NA    1       2       70
+## 91   655      2   1  63   NA        NA    NA   11       0      100
+## 92   239      2   1  70   NA        NA    NA   22       1       80
+## 93    88      2   1  66   NA        NA    NA    5       1       90
+## 94   245      2   2  57   NA        NA    NA   10       1       80
+## 95   588      1   2  69   NA        NA    NA    1       0      100
+## 96    30      2   1  72   NA        NA    NA   12       2       80
+## 97   179      2   1  69   NA        NA    NA    3       1       80
+## 98   310      2   1  71   NA        NA    NA   12       1       90
+## 99   477      2   1  64   NA        NA    NA   11       1       90
+## 100  166      2   2  70   NA        NA    NA    3       0       90
+## 101  559      1   2  58   NA        NA    NA    1       0      100
+## 102  450      2   2  69   NA        NA    NA    6       1       80
+## 103  364      2   1  56   NA        NA    NA   13       1       70
+## 104  107      2   1  63   NA        NA    NA    6       1       90
+## 105  177      2   1  59   NA        NA    NA   13       2       50
+## 106  156      2   1  66   NA        NA    NA   12       1       80
+## 107  529      1   2  54   NA        NA    NA   26       1       80
+## 108   11      2   1  67   NA        NA    NA    1       1       90
+## 109  429      2   1  55   NA        NA    NA   21       1      100
+## 110  351      2   2  75   NA        NA    NA    3       2       60
+## 111   15      2   1  69   NA        NA    NA   13       0       90
+## 112  181      2   1  44   NA        NA    NA    1       1       80
+## 113  283      2   1  80   NA        NA    NA   10       1       80
+## 114  201      2   2  75   NA        NA    NA    3       0       90
+## 115  524      2   2  54   NA        NA    NA    6       1       80
+## 116   13      2   1  76   NA        NA    NA    1       2       70
+## 117  212      2   1  49   NA        NA    NA    3       2       70
+## 118  524      2   1  68   NA        NA    NA    1       2       60
+## 119  288      2   1  66   NA        NA    NA   16       2       70
+## 120  363      2   1  80   NA        NA    NA   15       1       80
+## 121  442      2   1  75   NA        NA    NA   22       0       90
+## 122  199      2   2  60   NA        NA    NA   26       2       70
+## 123  550      2   2  69   NA        NA    NA    3       1       70
+## 124   54      2   1  72   NA        NA    NA   11       2       60
+## 125  558      2   1  70   NA        NA    NA    1       0       90
+## 126  207      2   1  66   NA        NA    NA   22       1       80
+## 127   92      2   1  50   NA        NA    NA    7       1       80
+## 128   60      2   1  64   NA        NA    NA   12       1       80
+## 129  551      1   2  77   NA        NA    NA   16       2       80
+## 130  543      1   2  48   NA        NA    NA   12       0       90
+## 131  293      2   2  59   NA        NA    NA    4       1       80
+## 132  202      2   1  53   NA        NA    NA   16       1       80
+## 133  353      2   1  47   NA        NA    NA    6       0      100
+## 134  511      1   2  55   NA        NA    NA   13       1       80
+## 135  267      2   1  67   NA        NA    NA    1       0       90
+## 136  511      1   2  74   NA        NA    NA   22       2       60
+## 137  371      2   2  58   NA        NA    NA   12       1       80
+## 138  387      2   1  56   NA        NA    NA   13       2       80
+## 139  457      2   1  54   NA        NA    NA    1       1       90
+## 140  337      2   1  56   NA        NA    NA    5       0      100
+## 141  201      2   2  73   NA        NA    NA   21       2       70
+## 142  404      1   1  74   NA        NA    NA    3       1       80
+## 143  222      2   1  76   NA        NA    NA   26       2       70
+## 144   62      2   2  65   NA        NA    NA    1       1       80
+## 145  458      1   1  57   NA        NA    NA   11       1       80
+## 146  356      1   2  53   NA        NA    NA   26       1       90
+## 147  353      2   1  71   NA        NA    NA   16       0      100
+## 148  163      2   1  54   NA        NA    NA   16       1       90
+## 149   31      2   1  82   NA        NA    NA   12       0      100
+## 150  340      2   2  59   NA        NA    NA   13       0      100
+## 151  229      2   1  70   NA        NA    NA   13       1       70
+## 152  444      1   1  60   NA        NA    NA   22       0       90
+## 153  315      1   2  62   NA        NA    NA    5       0       90
+## 154  182      2   2  53   NA        NA    NA   16       1       80
+## 155  156      2   1  55   NA        NA    NA   32       2       70
+## 156  329      2   1  69   NA        NA    NA   NA       2       70
+## 157  364      1   2  68   NA        NA    NA   26       1       90
+## 158  291      2   1  62   NA        NA    NA    4       2       70
+## 159  179      2   1  63   NA        NA    NA   12       1       80
+## 160  376      1   2  56   NA        NA    NA    1       1       80
+## 161  384      1   2  62   NA        NA    NA   32       0       90
+## 162  268      2   2  44   NA        NA    NA   10       1       90
+## 163  292      1   1  69   NA        NA    NA   11       2       60
+## 164  142      2   1  63   NA        NA    NA    6       1       90
+## 165  413      1   1  64   NA        NA    NA    7       1       80
+## 166  266      1   2  57   NA        NA    NA   16       0       90
+## 167  194      2   2  60   NA        NA    NA   11       1       80
+## 168  320      2   1  46   NA        NA    NA   21       0      100
+## 169  181      2   1  61   NA        NA    NA    6       1       90
+## 170  285      2   1  65   NA        NA    NA   12       0      100
+## 171  301      1   1  61   NA        NA    NA   13       1       90
+## 172  348      2   2  58   NA        NA    NA    2       0       90
+## 173  197      2   1  56   NA        NA    NA    2       1       90
+## 174  382      1   2  43   NA        NA    NA   16       0      100
+## 175  303      1   1  53   NA        NA    NA    1       1       90
+## 176  296      1   2  59   NA        NA    NA   13       1       80
+## 177  180      2   1  56   NA        NA    NA    1       2       60
+## 178  186      2   2  55   NA        NA    NA   13       1       80
+## 179  145      2   2  53   NA        NA    NA    1       1       80
+## 180  269      1   2  74   NA        NA    NA    7       0      100
+## 181  300      1   1  60   NA        NA    NA   13       0      100
+## 182  284      1   1  39   NA        NA    NA    1       0      100
+## 183  350      2   2  66   NA        NA    NA   16       0       90
+## 184  272      1   2  65   NA        NA    NA   32       1       80
+## 185  292      1   2  51   NA        NA    NA   12       0       90
+## 186  332      1   2  45   NA        NA    NA   12       0       90
+## 187  285      2   2  72   NA        NA    NA    2       2       70
+## 188  259      1   1  58   NA        NA    NA    3       0       90
+## 189  110      2   1  64   NA        NA    NA   15       1       80
+## 190  286      2   1  53   NA        NA    NA   22       0       90
+## 191  270      2   1  72   NA        NA    NA   16       1       80
+## 192   81      2   1  52   NA        NA    NA   16       2       60
+## 193  131      2   1  50   NA        NA    NA   12       1       90
+## 194  225      1   1  64   NA        NA    NA    1       1       90
+## 195  269      2   1  71   NA        NA    NA   22       1       90
+## 196  225      1   1  70   NA        NA    NA   12       0      100
+## 197  243      1   2  63   NA        NA    NA   32       1       80
+## 198  279      1   1  64   NA        NA    NA   21       1       90
+## 199  276      1   2  52   NA        NA    NA    1       0      100
+## 200  135      2   1  60   NA        NA    NA   32       1       90
+## 201   79      2   2  64   NA        NA    NA   15       1       90
+## 202   59      2   1  73   NA        NA    NA   22       1       60
+## 203  240      1   2  63   NA        NA    NA   32       0       90
+## 204  202      1   2  50   NA        NA    NA    3       0      100
+## 205  235      1   2  63   NA        NA    NA   26       0      100
+## 206  105      2   1  62   NA        NA    NA   33       2       NA
+## 207  224      1   2  55   NA        NA    NA    5       0       80
+## 208  239      2   2  50   NA        NA    NA   13       2       60
+## 209  237      1   1  69   NA        NA    NA   21       1       80
+## 210  173      1   2  59   NA        NA    NA   33       1       90
+## 211  252      1   2  60   NA        NA    NA    1       0      100
+## 212  221      1   1  67   NA        NA    NA    6       1       80
+## 213  185      1   1  69   NA        NA    NA   15       1       90
+## 214   92      1   2  64   NA        NA    NA   11       2       70
+## 215   13      2   1  65   NA        NA    NA   11       1       80
+## 216  222      1   1  65   NA        NA    NA   11       1       90
+## 217  192      1   2  41   NA        NA    NA   13       1       90
+## 218  183      2   1  76   NA        NA    NA   21       2       80
+## 219  211      1   2  70   NA        NA    NA   11       2       70
+## 220  175      1   2  57   NA        NA    NA    2       0       80
+## 221  197      1   1  67   NA        NA    NA   22       1       80
+## 222  203      1   2  71   NA        NA    NA   11       1       80
+## 223  116      2   1  76   NA        NA    NA    1       1       80
+## 224  188      1   1  77   NA        NA    NA    1       1       80
+## 225  191      1   1  39   NA        NA    NA   13       0       90
+## 226  105      1   2  75   NA        NA    NA   32       2       60
+## 227  174      1   1  66   NA        NA    NA    6       1       90
+## 228  177      1   2  58   NA        NA    NA   22       1       80
+##     pat.karno meal.cal wt.loss
+## 1         100     1175      NA
+## 2          90     1225      15
+## 3          90       NA      15
+## 4          60     1150      11
+## 5          90       NA       0
+## 6          80      513       0
+## 7          60      384      10
+## 8          80      538       1
+## 9          80      825      16
+## 10         70      271      34
+## 11         80     1025      27
+## 12         70       NA      23
+## 13         90       NA       5
+## 14         70     1225      32
+## 15         70     2600      60
+## 16         90       NA      15
+## 17        100     1150      -5
+## 18         70     1025      22
+## 19         60      238      10
+## 20         80     1175      NA
+## 21         80     1025      17
+## 22         70     1175      -8
+## 23         80       NA      16
+## 24        100      975      13
+## 25         80       NA       0
+## 26         80      825       6
+## 27        100     1025     -13
+## 28         70     1075      20
+## 29         70      875      -7
+## 30         50      305      20
+## 31         90     1025      -1
+## 32         70      388      20
+## 33         80       NA     -11
+## 34         60      925     -15
+## 35        100     1075      10
+## 36         50     1025      NA
+## 37         60      513      28
+## 38         90      875       4
+## 39         40     1225      24
+## 40        100     1175      15
+## 41         60      975      10
+## 42         70     1075      11
+## 43         90      363      27
+## 44         60       NA      NA
+## 45         70     1025       7
+## 46         60      625     -24
+## 47         70      463      30
+## 48         70     1025      10
+## 49         90     1425       2
+## 50        100     1175       4
+## 51         90       NA       9
+## 52         70       NA       0
+## 53        100     1025       0
+## 54         90     1175       7
+## 55         80     1300      15
+## 56         80      725      NA
+## 57         80      338       5
+## 58         60       NA      18
+## 59         80     1225      10
+## 60         80     1075      -3
+## 61         70      438       8
+## 62         80     1300      68
+## 63        100     1025      NA
+## 64         80     1025       0
+## 65         60     1125       0
+## 66         50      825       8
+## 67         NA      538       2
+## 68         70     1025       3
+## 69         80     1039       0
+## 70        100      488      23
+## 71         90     1175      -1
+## 72         90      538      29
+## 73        100     1175       0
+## 74         80       NA       3
+## 75         80      825       3
+## 76         90     1075      19
+## 77         80     1300       0
+## 78         70     1225      -2
+## 79         NA      731      15
+## 80         70      169      30
+## 81         80      768       5
+## 82         90     1500      15
+## 83         80     1425       8
+## 84         90      588      -1
+## 85         80     1025       1
+## 86         90     1100      14
+## 87         80     1150       1
+## 88         90     1175       4
+## 89         80      588      39
+## 90         70      910       2
+## 91         90      975      -1
+## 92        100       NA      23
+## 93         80      875       8
+## 94         60      280      14
+## 95         90       NA      13
+## 96         60      288       7
+## 97         80       NA      25
+## 98        100       NA       0
+## 99        100      910       0
+## 100        70       NA      10
+## 101       100      710      15
+## 102        90     1175       3
+## 103        80       NA       4
+## 104        70       NA       0
+## 105        NA       NA      32
+## 106        90      875      14
+## 107       100      975      -3
+## 108        90      925      NA
+## 109        80      975       5
+## 110        50      925      11
+## 111        70      575      10
+## 112        90     1175       5
+## 113       100     1030       6
+## 114       100       NA       1
+## 115       100       NA      15
+## 116        70      413      20
+## 117        60      675      20
+## 118        70     1300      30
+## 119        60      613      24
+## 120        90      346      11
+## 121        90       NA       0
+## 122        80      675      10
+## 123        80      910       0
+## 124        60      768      -3
+## 125        90     1025      17
+## 126        80      925      20
+## 127        60     1075      13
+## 128        90      993       0
+## 129        60      750      28
+## 130        60       NA       4
+## 131        80      925      52
+## 132        80       NA      20
+## 133        90     1225       5
+## 134        70       NA      49
+## 135        70      313       6
+## 136        40       96      37
+## 137        70       NA       0
+## 138        60     1075      NA
+## 139        90      975      -5
+## 140       100     1500      15
+## 141        60     1225     -16
+## 142        70      413      38
+## 143        70     1500       8
+## 144        90     1075       0
+## 145       100      513      30
+## 146        90       NA       2
+## 147        80      775       2
+## 148        80     1225      13
+## 149        90      413      27
+## 150        90       NA       0
+## 151        60     1175      -2
+## 152       100       NA       7
+## 153        90       NA       0
+## 154        60       NA       4
+## 155        30     1025      10
+## 156        80      713      20
+## 157        90       NA       7
+## 158        60      475      27
+## 159        70      538      -2
+## 160        90      825      17
+## 161        90      588       8
+## 162       100     2450       2
+## 163        70     2450      36
+## 164        80      875       2
+## 165        70      413      16
+## 166        90     1075       3
+## 167        60       NA      33
+## 168       100      860       4
+## 169        90      730       0
+## 170        90     1025       0
+## 171       100      825       2
+## 172        80     1225      10
+## 173        60      768      37
+## 174        90      338       6
+## 175        80     1225      12
+## 176       100     1025       0
+## 177        80     1225      -2
+## 178        70       NA      NA
+## 179        90      588      13
+## 180       100      588       0
+## 181       100      975       5
+## 182        90     1225      -5
+## 183       100     1025      NA
+## 184        90       NA      -1
+## 185        80     1225       0
+## 186       100      975       5
+## 187        90      463      20
+## 188        80     1300       8
+## 189        60     1025      12
+## 190        90     1225       8
+## 191        90      488      14
+## 192        70     1075      NA
+## 193        80      513      NA
+## 194        80      825      33
+## 195        90     1300      -2
+## 196       100     1175       6
+## 197        90      825       0
+## 198        90       NA       4
+## 199        80      975       0
+## 200        70     1275       0
+## 201        90      488      37
+## 202        60     2200       5
+## 203       100     1025       0
+## 204       100      635       1
+## 205        90      413       0
+## 206        70       NA      NA
+## 207        90       NA      23
+## 208        60     1025      -3
+## 209        70       NA      NA
+## 210        80       NA      10
+## 211        90      488      -2
+## 212        70      413      23
+## 213        70     1075       0
+## 214       100       NA      31
+## 215        90       NA      10
+## 216        70     1025      18
+## 217        80       NA     -10
+## 218        60      825       7
+## 219        30      131       3
+## 220        80      725      11
+## 221        90     1500       2
+## 222        90     1025       0
+## 223        80       NA       0
+## 224        60       NA       3
+## 225        90     2350      -5
+## 226        70     1025       5
+## 227       100     1075       1
+## 228        90     1060       0</code></pre>
+<pre class="r"><code>cancer &lt;- right_join(Melanoma, lung)</code></pre>
+<pre><code>## Joining, by = c(&quot;time&quot;, &quot;status&quot;, &quot;sex&quot;, &quot;age&quot;)</code></pre>
+<pre class="r"><code>cancer %&gt;% na.omit(cancer)</code></pre>
+<pre><code>##  [1] time      status    sex       age       year      thickness ulcer    
+##  [8] inst      ph.ecog   ph.karno  pat.karno meal.cal  wt.loss  
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<p>Both of the datasets were already tidy so I had to untidy them first. I used pivot_wider in order to do this so all of the variables had their own columns. I used pivot_longer to re-tidy. I used full join in order to join both datasets so all of the original dataset would be retained and no rows would be dropped. I thought that since I wasn’t comparing many variables, I should keep as much as original of the data as possible.</p>
+<p>#Wrangling</p>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;1&quot;, sex == &quot;0&quot;))</code></pre>
+<pre><code>## Observations: 0
+## Variables: 13
+## $ time      &lt;dbl&gt; 
+## $ status    &lt;dbl&gt; 
+## $ sex       &lt;dbl&gt; 
+## $ age       &lt;dbl&gt; 
+## $ year      &lt;int&gt; 
+## $ thickness &lt;dbl&gt; 
+## $ ulcer     &lt;int&gt; 
+## $ inst      &lt;dbl&gt; 
+## $ ph.ecog   &lt;dbl&gt; 
+## $ ph.karno  &lt;dbl&gt; 
+## $ pat.karno &lt;dbl&gt; 
+## $ meal.cal  &lt;dbl&gt; 
+## $ wt.loss   &lt;dbl&gt;</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;1&quot;, sex == &quot;1&quot;))</code></pre>
+<pre><code>## Observations: 26
+## Variables: 13
+## $ time      &lt;dbl&gt; 1010, 1022, 840, 196, 806, 404, 458, 444, 292, 413, 30…
+## $ status    &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ sex       &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ age       &lt;dbl&gt; 56, 74, 63, 42, 44, 74, 57, 60, 69, 64, 61, 53, 60, 39…
+## $ year      &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ thickness &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ ulcer     &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ inst      &lt;dbl&gt; 3, 12, 13, 11, 16, 3, 11, 22, 11, 7, 13, 1, 13, 1, 3, …
+## $ ph.ecog   &lt;dbl&gt; 0, 1, 0, 1, 1, 1, 1, 0, 2, 1, 1, 1, 0, 0, 0, 1, 0, 1, …
+## $ ph.karno  &lt;dbl&gt; 90, 50, 90, 80, 80, 80, 80, 90, 60, 80, 90, 90, 100, 1…
+## $ pat.karno &lt;dbl&gt; 90, 80, 90, 80, 80, 70, 100, 100, 70, 70, 100, 80, 100…
+## $ meal.cal  &lt;dbl&gt; NA, 513, 1175, 1425, 1025, 413, 513, NA, 2450, 413, 82…
+## $ wt.loss   &lt;dbl&gt; 15, 0, -1, 8, 1, 38, 30, 7, 36, 16, 2, 12, 5, -5, 8, 3…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;2&quot;, sex == &quot;0&quot;))</code></pre>
+<pre><code>## Observations: 0
+## Variables: 13
+## $ time      &lt;dbl&gt; 
+## $ status    &lt;dbl&gt; 
+## $ sex       &lt;dbl&gt; 
+## $ age       &lt;dbl&gt; 
+## $ year      &lt;int&gt; 
+## $ thickness &lt;dbl&gt; 
+## $ ulcer     &lt;int&gt; 
+## $ inst      &lt;dbl&gt; 
+## $ ph.ecog   &lt;dbl&gt; 
+## $ ph.karno  &lt;dbl&gt; 
+## $ pat.karno &lt;dbl&gt; 
+## $ meal.cal  &lt;dbl&gt; 
+## $ wt.loss   &lt;dbl&gt;</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;2&quot;, sex == &quot;1&quot;))</code></pre>
+<pre><code>## Observations: 112
+## Variables: 13
+## $ time      &lt;dbl&gt; 306, 455, 210, 883, 218, 166, 170, 71, 567, 144, 613, …
+## $ status    &lt;dbl&gt; 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, …
+## $ sex       &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ age       &lt;dbl&gt; 74, 68, 57, 60, 53, 61, 57, 60, 57, 67, 70, 63, 57, 67…
+## $ year      &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ thickness &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ ulcer     &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ inst      &lt;dbl&gt; 3, 3, 5, 1, 1, 7, 6, 21, 12, 1, 22, 16, 21, 11, 11, 15…
+## $ ph.ecog   &lt;dbl&gt; 1, 0, 1, 0, 1, 2, 1, NA, 1, 1, 1, 2, 1, 1, 1, 0, 0, 0,…
+## $ ph.karno  &lt;dbl&gt; 90, 90, 90, 100, 70, 70, 80, 60, 80, 80, 90, 50, 90, 8…
+## $ pat.karno &lt;dbl&gt; 100, 90, 60, 90, 80, 70, 80, 70, 70, 90, 100, 70, 80, …
+## $ meal.cal  &lt;dbl&gt; 1175, 1225, 1150, NA, 825, 271, 1025, 1225, 2600, NA, …
+## $ wt.loss   &lt;dbl&gt; NA, 15, 11, 0, 16, 34, 27, 32, 60, 15, -5, 22, NA, 17,…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;3&quot;, sex == &quot;0&quot;))</code></pre>
+<pre><code>## Observations: 0
+## Variables: 13
+## $ time      &lt;dbl&gt; 
+## $ status    &lt;dbl&gt; 
+## $ sex       &lt;dbl&gt; 
+## $ age       &lt;dbl&gt; 
+## $ year      &lt;int&gt; 
+## $ thickness &lt;dbl&gt; 
+## $ ulcer     &lt;int&gt; 
+## $ inst      &lt;dbl&gt; 
+## $ ph.ecog   &lt;dbl&gt; 
+## $ ph.karno  &lt;dbl&gt; 
+## $ pat.karno &lt;dbl&gt; 
+## $ meal.cal  &lt;dbl&gt; 
+## $ wt.loss   &lt;dbl&gt;</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% filter(status == &quot;1&quot;, sex == &quot;1&quot;))</code></pre>
+<pre><code>## Observations: 26
+## Variables: 13
+## $ time      &lt;dbl&gt; 1010, 1022, 840, 196, 806, 404, 458, 444, 292, 413, 30…
+## $ status    &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ sex       &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ age       &lt;dbl&gt; 56, 74, 63, 42, 44, 74, 57, 60, 69, 64, 61, 53, 60, 39…
+## $ year      &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ thickness &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ ulcer     &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ inst      &lt;dbl&gt; 3, 12, 13, 11, 16, 3, 11, 22, 11, 7, 13, 1, 13, 1, 3, …
+## $ ph.ecog   &lt;dbl&gt; 0, 1, 0, 1, 1, 1, 1, 0, 2, 1, 1, 1, 0, 0, 0, 1, 0, 1, …
+## $ ph.karno  &lt;dbl&gt; 90, 50, 90, 80, 80, 80, 80, 90, 60, 80, 90, 90, 100, 1…
+## $ pat.karno &lt;dbl&gt; 90, 80, 90, 80, 80, 70, 100, 100, 70, 70, 100, 80, 100…
+## $ meal.cal  &lt;dbl&gt; NA, 513, 1175, 1425, 1025, 413, 513, NA, 2450, 413, 82…
+## $ wt.loss   &lt;dbl&gt; 15, 0, -1, 8, 1, 38, 30, 7, 36, 16, 2, 12, 5, -5, 8, 3…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% slice(1,n()))</code></pre>
+<pre><code>## Observations: 2
+## Variables: 13
+## $ time      &lt;dbl&gt; 306, 177
+## $ status    &lt;dbl&gt; 2, 1
+## $ sex       &lt;dbl&gt; 1, 2
+## $ age       &lt;dbl&gt; 74, 58
+## $ year      &lt;int&gt; NA, NA
+## $ thickness &lt;dbl&gt; NA, NA
+## $ ulcer     &lt;int&gt; NA, NA
+## $ inst      &lt;dbl&gt; 3, 22
+## $ ph.ecog   &lt;dbl&gt; 1, 1
+## $ ph.karno  &lt;dbl&gt; 90, 80
+## $ pat.karno &lt;dbl&gt; 100, 90
+## $ meal.cal  &lt;dbl&gt; 1175, 1060
+## $ wt.loss   &lt;dbl&gt; NA, 0</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% dplyr::select(1,2,4))</code></pre>
+<pre><code>## Observations: 228
+## Variables: 3
+## $ time   &lt;dbl&gt; 306, 455, 1010, 210, 883, 1022, 310, 361, 218, 166, 170, …
+## $ status &lt;dbl&gt; 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, …
+## $ age    &lt;dbl&gt; 74, 68, 56, 57, 60, 74, 68, 71, 53, 61, 57, 68, 68, 60, 5…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% arrange(desc(status),desc(age), desc(sex), desc(time)))</code></pre>
+<pre><code>## Observations: 228
+## Variables: 13
+## $ time      &lt;dbl&gt; 31, 11, 363, 283, 95, 222, 183, 116, 13, 444, 351, 201…
+## $ status    &lt;dbl&gt; 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, …
+## $ sex       &lt;dbl&gt; 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, …
+## $ age       &lt;dbl&gt; 82, 81, 80, 80, 76, 76, 76, 76, 76, 75, 75, 75, 75, 74…
+## $ year      &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ thickness &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ ulcer     &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ inst      &lt;dbl&gt; 12, 3, 15, 10, 7, 26, 21, 1, 1, 22, 3, 3, 22, 13, 3, 1…
+## $ ph.ecog   &lt;dbl&gt; 0, 0, 1, 1, 2, 2, 2, 1, 2, 2, 2, 0, 0, 0, 1, 0, 2, 2, …
+## $ ph.karno  &lt;dbl&gt; 100, 90, 80, 80, 60, 70, 80, 80, 70, 70, 60, 90, 90, 9…
+## $ pat.karno &lt;dbl&gt; 90, NA, 90, 100, 60, 70, 60, 80, 70, 70, 50, 100, 90, …
+## $ meal.cal  &lt;dbl&gt; 413, 731, 346, 1030, 625, 1500, 825, NA, 413, 438, 925…
+## $ wt.loss   &lt;dbl&gt; 27, 15, 11, 6, -24, 8, 7, 0, 20, 8, 11, 1, 0, 2, NA, 3…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% mutate(survivaltime=time/365))</code></pre>
+<pre><code>## Observations: 228
+## Variables: 14
+## $ time         &lt;dbl&gt; 306, 455, 1010, 210, 883, 1022, 310, 361, 218, 166,…
+## $ status       &lt;dbl&gt; 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, …
+## $ sex          &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 1, …
+## $ age          &lt;dbl&gt; 74, 68, 56, 57, 60, 74, 68, 71, 53, 61, 57, 68, 68,…
+## $ year         &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,…
+## $ thickness    &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,…
+## $ ulcer        &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,…
+## $ inst         &lt;dbl&gt; 3, 3, 3, 5, 1, 12, 7, 11, 1, 7, 6, 16, 11, 21, 12, …
+## $ ph.ecog      &lt;dbl&gt; 1, 0, 0, 1, 0, 1, 2, 2, 1, 2, 1, 2, 1, NA, 1, 1, 1,…
+## $ ph.karno     &lt;dbl&gt; 90, 90, 90, 90, 100, 50, 70, 60, 70, 70, 80, 70, 90…
+## $ pat.karno    &lt;dbl&gt; 100, 90, 90, 60, 90, 80, 60, 80, 80, 70, 80, 70, 90…
+## $ meal.cal     &lt;dbl&gt; 1175, 1225, NA, 1150, NA, 513, 384, 538, 825, 271, …
+## $ wt.loss      &lt;dbl&gt; NA, 15, 15, 11, 0, 0, 10, 1, 16, 34, 27, 23, 5, 32,…
+## $ survivaltime &lt;dbl&gt; 0.8383562, 1.2465753, 2.7671233, 0.5753425, 2.41917…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% mutate(meanage=mean(age)))</code></pre>
+<pre><code>## Observations: 228
+## Variables: 14
+## $ time      &lt;dbl&gt; 306, 455, 1010, 210, 883, 1022, 310, 361, 218, 166, 17…
+## $ status    &lt;dbl&gt; 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, …
+## $ sex       &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, …
+## $ age       &lt;dbl&gt; 74, 68, 56, 57, 60, 74, 68, 71, 53, 61, 57, 68, 68, 60…
+## $ year      &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ thickness &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ ulcer     &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA…
+## $ inst      &lt;dbl&gt; 3, 3, 3, 5, 1, 12, 7, 11, 1, 7, 6, 16, 11, 21, 12, 1, …
+## $ ph.ecog   &lt;dbl&gt; 1, 0, 0, 1, 0, 1, 2, 2, 1, 2, 1, 2, 1, NA, 1, 1, 1, 2,…
+## $ ph.karno  &lt;dbl&gt; 90, 90, 90, 90, 100, 50, 70, 60, 70, 70, 80, 70, 90, 6…
+## $ pat.karno &lt;dbl&gt; 100, 90, 90, 60, 90, 80, 60, 80, 80, 70, 80, 70, 90, 7…
+## $ meal.cal  &lt;dbl&gt; 1175, 1225, NA, 1150, NA, 513, 384, 538, 825, 271, 102…
+## $ wt.loss   &lt;dbl&gt; NA, 15, 15, 11, 0, 0, 10, 1, 16, 34, 27, 23, 5, 32, 60…
+## $ meanage   &lt;dbl&gt; 62.44737, 62.44737, 62.44737, 62.44737, 62.44737, 62.4…</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% summarize(mean(age,na.rm = T), n(), n_distinct(status)))</code></pre>
+<pre><code>## Observations: 1
+## Variables: 3
+## $ `mean(age, na.rm = T)` &lt;dbl&gt; 62.44737
+## $ `n()`                  &lt;int&gt; 228
+## $ `n_distinct(status)`   &lt;int&gt; 2</code></pre>
+<pre class="r"><code>glimpse(cancer %&gt;% summarize(mean(age,na.rm = T), n(), n_distinct(time)))</code></pre>
+<pre><code>## Observations: 1
+## Variables: 3
+## $ `mean(age, na.rm = T)` &lt;dbl&gt; 62.44737
+## $ `n()`                  &lt;int&gt; 228
+## $ `n_distinct(time)`     &lt;int&gt; 186</code></pre>
+<pre class="r"><code>cancer %&gt;% group_by(status) %&gt;% summarize(meanage=mean(age, na.rm = T), sdage=sd(age,na.rm = T), varage=var(age,na.rm=T),meantime=mean(time,na.rm=T),sdtime=sd(time,na.rm=T),vartime=var(time,na.rm=T),meanthickness=mean(thickness, na.rm = T), sdsthickness=sd(thickness,na.rm = T), varthickness=var(thickness,na.rm=T),meanphecog=mean(ph.ecog, na.rm=T), sdsphecog=sd(ph.ecog, na.rm = T), varphecog=var(ph.ecog,na.rm = T))</code></pre>
+<pre><code>## # A tibble: 2 x 13
+##   status meanage sdage varage meantime sdtime vartime meanthickness
+##    &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;
+## 1      1    60.3  9.74   94.8     363.   221.  48901.           NaN
+## 2      2    63.3  8.69   75.6     283    203.  41130.           NaN
+## # … with 5 more variables: sdsthickness &lt;dbl&gt;, varthickness &lt;dbl&gt;,
+## #   meanphecog &lt;dbl&gt;, sdsphecog &lt;dbl&gt;, varphecog &lt;dbl&gt;</code></pre>
+<p>With the fitler and slice function, I was able to choose specific rows I wanted to see based on status of the patient and their sex. Select function allowed me to choose specific variables to observe. After arranging, I see the information such as age and time of survival of patients who are alive and dead. The oldest censored patient survived 31 days while the youngest censored patient survived 5 days. I created a new variable which converted survial time into years and the mean of the ages. Summarizing shows that the mean age was 62.44 distint upon censored status and 186 days for survial time. A dead patient was on average age 60 years while a censored patient was on average 63 years old.</p>
+<p>#Visualizing</p>
+<pre class="r"><code>library(ggplot2)
+ggplot(cancer,aes(x=age,y=time,fill=status))+geom_bar(stat = &quot;summary&quot;, fun.y=&quot;mean&quot;, position = &quot;dodge&quot;)+ggtitle(&quot;Survival Time by Age&quot;)+theme(legend.position = &quot;none&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>ggplot(cancer,aes(status))+geom_bar(aes(fill=age))+theme(legend.position = &quot;none&quot;)+ggtitle(&quot;Status based on Age&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
+<p>The first plot shows the ages based on the survial time in days. I do not see a distinct correlation between the 2 variables since the days differ from eaach other for all ages. Most of the alive and censored patients however are young, which was expected. They range from ages 38-50 years old.
+The second plot shows the count distribution for each status. There was a signficantly greater number of alive patients than dead patients.</p>
+<p>#Dimensionality Reduction</p>
+<pre class="r"><code>cancer1&lt;-cancer%&gt;%dplyr::select(status, age, time)       
+cancer1%&gt;%select_if(is.numeric)%&gt;%scale</code></pre>
+<pre><code>##            status         age         time
+##   [1,]  0.6165578  1.27323380  0.003643770
+##   [2,]  0.6165578  0.61196431  0.710993177
+##   [3,] -1.6147943 -0.71057467  3.345751034
+##   [4,]  0.6165578 -0.60036309 -0.452098130
+##   [5,]  0.6165578 -0.26972834  2.742842480
+##   [6,] -1.6147943  1.27323380  3.402718772
+##   [7,]  0.6165578  0.61196431  0.022633016
+##   [8,]  0.6165578  0.94259905  0.264745900
+##   [9,]  0.6165578 -1.04120942 -0.414119638
+##  [10,]  0.6165578 -0.15951676 -0.660979834
+##  [11,]  0.6165578 -0.60036309 -0.641990588
+##  [12,]  0.6165578  0.61196431  1.655708156
+##  [13,]  0.6165578  0.61196431  2.007009204
+##  [14,]  0.6165578 -0.26972834 -1.111974422
+##  [15,]  0.6165578 -0.60036309  1.242692060
+##  [16,]  0.6165578  0.50175273 -0.765420686
+##  [17,]  0.6165578  0.83238747  1.461068387
+##  [18,]  0.6165578  0.06090640  1.907315663
+##  [19,]  0.6165578 -0.71057467 -1.159447537
+##  [20,]  0.6165578 -0.60036309 -1.031270128
+##  [21,]  0.6165578  0.50175273 -0.020092788
+##  [22,]  0.6165578 -1.48205574 -1.064501308
+##  [23,]  0.6165578 -1.37184416  1.513288813
+##  [24,]  0.6165578 -0.49015151  0.312219014
+##  [25,]  0.6165578  1.05281064  0.421407178
+##  [26,]  0.6165578  0.83238747  1.019568421
+##  [27,]  0.6165578 -0.26972834  1.275923240
+##  [28,]  0.6165578  0.83238747 -0.888850784
+##  [29,]  0.6165578 -1.04120942  0.402417932
+##  [30,]  0.6165578  1.27323380 -1.392065798
+##  [31,]  0.6165578  0.72217589  0.796444783
+##  [32,]  0.6165578  1.16302222 -1.325603438
+##  [33,]  0.6165578 -1.59226732  1.081283470
+##  [34,]  0.6165578 -0.26972834 -0.941071210
+##  [35,]  0.6165578 -0.15951676 -1.197426028
+##  [36,]  0.6165578 -0.04930518 -0.869861538
+##  [37,]  0.6165578  0.28132956  2.415277989
+##  [38,] -1.6147943  0.39154115  3.132122019
+##  [39,]  0.6165578  1.27323380 -1.007533570
+##  [40,]  0.6165578  0.17111798  2.021251138
+##  [41,]  0.6165578  0.83238747  0.734729734
+##  [42,]  0.6165578  1.16302222 -0.722694883
+##  [43,]  0.6165578 -0.37993993  0.606552325
+##  [44,]  0.6165578 -0.26972834 -0.760673375
+##  [45,]  0.6165578  0.61196431  1.318649043
+##  [46,]  0.6165578  1.49365696 -0.998038947
+##  [47,]  0.6165578  1.27323380 -0.010598165
+##  [48,]  0.6165578  0.06090640  1.014821110
+##  [49,]  0.6165578  1.27323380  1.603487730
+##  [50,]  0.6165578 -1.37184416  2.182659728
+##  [51,]  0.6165578  1.05281064  2.040240384
+##  [52,]  0.6165578  0.06090640 -0.551791671
+##  [53,]  0.6165578  0.61196431 -1.197426028
+##  [54,]  0.6165578 -0.49015151 -0.281194918
+##  [55,]  0.6165578 -0.37993993  1.821864057
+##  [56,]  0.6165578 -0.04930518 -1.140458291
+##  [57,]  0.6165578  0.28132956 -1.425296978
+##  [58,]  0.6165578 -0.60036309 -0.822388423
+##  [59,]  0.6165578 -0.49015151  1.812369434
+##  [60,]  0.6165578  0.17111798  0.188788917
+##  [61,]  0.6165578  1.38344538  0.658772751
+##  [62,]  0.6165578 -1.59226732 -0.390383081
+##  [63,]  0.6165578  1.16302222 -0.618254031
+##  [64,]  0.6165578  0.28132956 -1.164194848
+##  [65,]  0.6165578  0.72217589 -0.675221768
+##  [66,]  0.6165578  0.61196431 -1.140458291
+##  [67,]  0.6165578  0.50175273 -0.461592753
+##  [68,] -1.6147943  0.17111798  2.448509169
+##  [69,]  0.6165578  0.61196431  0.582815767
+##  [70,]  0.6165578  0.50175273 -0.357151901
+##  [71,] -1.6147943  0.06090640  2.538708087
+##  [72,]  0.6165578 -1.59226732 -0.001103542
+##  [73,]  0.6165578  1.27323380 -1.396813110
+##  [74,]  0.6165578 -2.47395998 -0.822388423
+##  [75,]  0.6165578 -1.04120942 -0.376141147
+##  [76,]  0.6165578  0.94259905  0.573321144
+##  [77,]  0.6165578 -1.26163258  1.897821040
+##  [78,]  0.6165578 -0.71057467  0.274240523
+##  [79,]  0.6165578  2.04471487 -1.396813110
+##  [80,]  0.6165578  1.16302222 -0.613506719
+##  [81,]  0.6165578 -0.37993993  2.306089826
+##  [82,]  0.6165578 -0.82078625 -0.998038947
+##  [83,] -1.6147943 -2.25353681 -0.518560490
+##  [84,]  0.6165578 -2.03311365 -0.656232523
+##  [85,] -1.6147943 -2.03311365  2.377299498
+##  [86,]  0.6165578  0.94259905 -0.100797082
+##  [87,]  0.6165578 -0.04930518  1.593993107
+##  [88,]  0.6165578 -0.15951676 -0.751178752
+##  [89,] -1.6147943 -2.03311365  2.063976941
+##  [90,]  0.6165578  1.05281064 -0.675221768
+##  [91,]  0.6165578  0.06090640  1.660455468
+##  [92,]  0.6165578  0.83238747 -0.314426098
+##  [93,]  0.6165578  0.39154115 -1.031270128
+##  [94,]  0.6165578 -0.60036309 -0.285942229
+##  [95,] -1.6147943  0.72217589  1.342385600
+##  [96,]  0.6165578  1.05281064 -1.306614192
+##  [97,]  0.6165578  0.72217589 -0.599264785
+##  [98,]  0.6165578  0.94259905  0.022633016
+##  [99,]  0.6165578  0.17111798  0.815434029
+## [100,]  0.6165578  0.83238747 -0.660979834
+## [101,] -1.6147943 -0.49015151  1.204713568
+## [102,]  0.6165578  0.72217589  0.687256619
+## [103,]  0.6165578 -0.71057467  0.278987834
+## [104,]  0.6165578  0.06090640 -0.941071210
+## [105,]  0.6165578 -0.37993993 -0.608759408
+## [106,]  0.6165578  0.39154115 -0.708452949
+## [107,] -1.6147943 -0.93099783  1.062294224
+## [108,]  0.6165578  0.50175273 -1.396813110
+## [109,]  0.6165578 -0.82078625  0.587563079
+## [110,]  0.6165578  1.38344538  0.217272785
+## [111,]  0.6165578  0.72217589 -1.377823864
+## [112,]  0.6165578 -2.03311365 -0.589770162
+## [113,]  0.6165578  1.93450329 -0.105544394
+## [114,]  0.6165578  1.38344538 -0.494823933
+## [115,]  0.6165578 -0.93099783  1.038557667
+## [116,]  0.6165578  1.49365696 -1.387318487
+## [117,]  0.6165578 -1.48205574 -0.442603507
+## [118,]  0.6165578  0.61196431  1.038557667
+## [119,]  0.6165578  0.39154115 -0.081807836
+## [120,]  0.6165578  1.93450329  0.274240523
+## [121,]  0.6165578  1.38344538  0.649278128
+## [122,]  0.6165578 -0.26972834 -0.504318556
+## [123,]  0.6165578  0.72217589  1.161987765
+## [124,]  0.6165578  1.05281064 -1.192678717
+## [125,]  0.6165578  0.83238747  1.199966257
+## [126,]  0.6165578  0.39154115 -0.466340064
+## [127,]  0.6165578 -1.37184416 -1.012280882
+## [128,]  0.6165578  0.17111798 -1.164194848
+## [129,] -1.6147943  1.60386854  1.166735076
+## [130,] -1.6147943 -1.59226732  1.128756585
+## [131,]  0.6165578 -0.37993993 -0.058071279
+## [132,]  0.6165578 -1.04120942 -0.490076622
+## [133,]  0.6165578 -1.70247891  0.226767408
+## [134,] -1.6147943 -0.82078625  0.976842618
+## [135,]  0.6165578  0.50175273 -0.181501377
+## [136,] -1.6147943  1.27323380  0.976842618
+## [137,]  0.6165578 -0.49015151  0.312219014
+## [138,]  0.6165578 -0.71057467  0.388175998
+## [139,]  0.6165578 -0.93099783  0.720487800
+## [140,]  0.6165578 -0.71057467  0.150810425
+## [141,]  0.6165578  1.16302222 -0.494823933
+## [142,] -1.6147943  1.27323380  0.468880292
+## [143,]  0.6165578  1.49365696 -0.395130393
+## [144,]  0.6165578  0.28132956 -1.154700225
+## [145,] -1.6147943 -0.60036309  0.725235111
+## [146,] -1.6147943 -1.04120942  0.241009343
+## [147,]  0.6165578  0.94259905  0.226767408
+## [148,]  0.6165578 -0.93099783 -0.675221768
+## [149,]  0.6165578  2.15492645 -1.301866881
+## [150,]  0.6165578 -0.37993993  0.165052359
+## [151,]  0.6165578  0.83238747 -0.361899212
+## [152,] -1.6147943 -0.26972834  0.658772751
+## [153,] -1.6147943 -0.04930518  0.046369573
+## [154,]  0.6165578 -1.04120942 -0.585022851
+## [155,]  0.6165578 -0.82078625 -0.708452949
+## [156,]  0.6165578  0.72217589  0.112831933
+## [157,] -1.6147943  0.61196431  0.278987834
+## [158,]  0.6165578 -0.04930518 -0.067565902
+## [159,]  0.6165578  0.06090640 -0.599264785
+## [160,] -1.6147943 -0.71057467  0.335955572
+## [161,] -1.6147943 -0.04930518  0.373934063
+## [162,]  0.6165578 -2.03311365 -0.176754066
+## [163,] -1.6147943  0.72217589 -0.062818591
+## [164,]  0.6165578  0.06090640 -0.774915309
+## [165,] -1.6147943  0.17111798  0.511606095
+## [166,] -1.6147943 -0.60036309 -0.186248688
+## [167,]  0.6165578 -0.26972834 -0.528055113
+## [168,]  0.6165578 -1.81269049  0.070106130
+## [169,]  0.6165578 -0.15951676 -0.589770162
+## [170,]  0.6165578  0.28132956 -0.096049771
+## [171,] -1.6147943 -0.15951676 -0.020092788
+## [172,]  0.6165578 -0.49015151  0.203030851
+## [173,]  0.6165578 -0.71057467 -0.513813179
+## [174,] -1.6147943 -2.14332523  0.364439440
+## [175,] -1.6147943 -1.04120942 -0.010598165
+## [176,] -1.6147943 -0.37993993 -0.043829345
+## [177,]  0.6165578 -0.71057467 -0.594517474
+## [178,]  0.6165578 -0.82078625 -0.566033605
+## [179,]  0.6165578 -1.04120942 -0.760673375
+## [180,] -1.6147943  1.27323380 -0.172006754
+## [181,] -1.6147943 -0.26972834 -0.024840099
+## [182,] -1.6147943 -2.58417156 -0.100797082
+## [183,]  0.6165578  0.39154115  0.212525474
+## [184,] -1.6147943  0.28132956 -0.157764820
+## [185,] -1.6147943 -1.26163258 -0.062818591
+## [186,] -1.6147943 -1.92290207  0.127073868
+## [187,]  0.6165578  1.05281064 -0.096049771
+## [188,] -1.6147943 -0.49015151 -0.219479869
+## [189,]  0.6165578  0.17111798 -0.926829276
+## [190,]  0.6165578 -1.04120942 -0.091302459
+## [191,]  0.6165578  1.05281064 -0.167259443
+## [192,]  0.6165578 -1.15142100 -1.064501308
+## [193,]  0.6165578 -1.37184416 -0.827135735
+## [194,] -1.6147943  0.17111798 -0.380888458
+## [195,]  0.6165578  0.94259905 -0.172006754
+## [196,] -1.6147943  0.83238747 -0.380888458
+## [197,] -1.6147943  0.06090640 -0.295436852
+## [198,] -1.6147943  0.17111798 -0.124533640
+## [199,] -1.6147943 -1.15142100 -0.138775574
+## [200,]  0.6165578 -0.26972834 -0.808146489
+## [201,]  0.6165578  0.17111798 -1.073995931
+## [202,]  0.6165578  1.16302222 -1.168942160
+## [203,] -1.6147943  0.06090640 -0.309678786
+## [204,] -1.6147943 -1.37184416 -0.490076622
+## [205,] -1.6147943  0.06090640 -0.333415344
+## [206,]  0.6165578 -0.04930518 -0.950565833
+## [207,] -1.6147943 -0.82078625 -0.385635770
+## [208,]  0.6165578 -1.37184416 -0.314426098
+## [209,] -1.6147943  0.72217589 -0.323920721
+## [210,] -1.6147943 -0.37993993 -0.627748654
+## [211,] -1.6147943 -0.26972834 -0.252711049
+## [212,] -1.6147943  0.50175273 -0.399877704
+## [213,] -1.6147943  0.72217589 -0.570780916
+## [214,] -1.6147943  0.17111798 -1.012280882
+## [215,]  0.6165578  0.28132956 -1.387318487
+## [216,] -1.6147943  0.28132956 -0.395130393
+## [217,] -1.6147943 -2.36374840 -0.537549736
+## [218,]  0.6165578  1.49365696 -0.580275539
+## [219,] -1.6147943  0.83238747 -0.447350819
+## [220,] -1.6147943 -0.60036309 -0.618254031
+## [221,] -1.6147943  0.50175273 -0.513813179
+## [222,] -1.6147943  0.94259905 -0.485329310
+## [223,]  0.6165578  1.49365696 -0.898345407
+## [224,] -1.6147943  1.60386854 -0.556538982
+## [225,] -1.6147943 -2.58417156 -0.542297048
+## [226,] -1.6147943  1.38344538 -0.950565833
+## [227,] -1.6147943  0.39154115 -0.623001342
+## [228,] -1.6147943 -0.49015151 -0.608759408
+## attr(,&quot;scaled:center&quot;)
+##     status        age       time 
+##   1.723684  62.447368 305.232456 
+## attr(,&quot;scaled:scale&quot;)
+##      status         age        time 
+##   0.4481588   9.0734566 210.6455431</code></pre>
+<pre class="r"><code>cancer_nums&lt;-cancer1%&gt;%select_if(is.numeric)%&gt;%scale
+rownames(cancer_nums)&lt;-cancer$time       
+cancer_pca&lt;-princomp((cancer_nums),cor = TRUE, scores = TRUE)
+names(cancer_pca)</code></pre>
+<pre><code>## [1] &quot;sdev&quot;     &quot;loadings&quot; &quot;center&quot;   &quot;scale&quot;    &quot;n.obs&quot;    &quot;scores&quot;  
+## [7] &quot;call&quot;</code></pre>
+<pre class="r"><code>summary(cancer_pca, loadings = T)</code></pre>
+<pre><code>## Importance of components:
+##                           Comp.1    Comp.2    Comp.3
+## Standard deviation     1.1267335 0.9606578 0.8986703
+## Proportion of Variance 0.4231761 0.3076211 0.2692027
+## Cumulative Proportion  0.4231761 0.7307973 1.0000000
+## 
+## Loadings:
+##        Comp.1 Comp.2 Comp.3
+## status  0.645         0.762
+## age     0.520 -0.765 -0.381
+## time   -0.560 -0.642  0.524</code></pre>
+<pre class="r"><code>eigval&lt;-cancer_pca$sdev^2
+varprop=round(eigval/sum(eigval),2)
+ggplot()+geom_bar(aes(y=varprop,x=1:3),stat=&quot;identity&quot;)+xlab(&quot;&quot;)+geom_path(aes(y=varprop,x=1:3))+geom_text(aes(x=1:3,y=varprop,label=round(varprop,2)),vjust=1,col=&quot;white&quot;,size=5)+scale_y_continuous(breaks=seq(0,.6,.2),labels = scales::percent)+scale_x_continuous(breaks=1:10)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code>round(cumsum(eigval)/sum(eigval),2)</code></pre>
+<pre><code>## Comp.1 Comp.2 Comp.3 
+##   0.42   0.73   1.00</code></pre>
+<pre class="r"><code>eigval</code></pre>
+<pre><code>##    Comp.1    Comp.2    Comp.3 
+## 1.2695284 0.9228634 0.8076082</code></pre>
+<pre class="r"><code>ggplot()+geom_point(aes(cancer_pca$scores[,1], cancer_pca$scores[,2]))+xlab(&quot;PC1&quot;)+ylab(&quot;PC2&quot;)</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-4-2.png" width="672" /></p>
+<pre class="r"><code>cancer_pca$loadings[1:3,1:2]%&gt;%as.data.frame%&gt;%rownames_to_column%&gt;%
+  ggplot()+geom_hline(aes(yintercept=0),lty=2)+
+  geom_vline(aes(xintercept=0),lty=2)+ylab(&quot;PC2&quot;)+xlab(&quot;PC1&quot;)+
+  geom_segment(aes(x=0,y=0,xend=Comp.1,yend=Comp.2),arrow=arrow(),col=&quot;red&quot;)+
+  geom_label(aes(x=Comp.1*1.1,y=Comp.2*1.1,label=rowname))</code></pre>
+<p><img src="/Project1_files/figure-html/unnamed-chunk-4-3.png" width="672" /></p>
+<p>The first graph shows that there is no correlation between PC1 and PC2. Most of the data was concentrated on the negative side, but there is no distinct relationship. The second graph shows that there is no correlation between teh 3 variables-age, status, and time. This proves my earlier expectation of having a negative correlation between age and status inccorect, becuase this graph proves otherwise.</p>
+<p>Note that the <code>echo = FALSE</code> parameter was added to the code chunk to prevent printing of the R code that generated the plot.</p>
+</div>

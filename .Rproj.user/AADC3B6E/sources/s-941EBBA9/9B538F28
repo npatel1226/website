@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1576136662559.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "9B538F28",
+    "lastKnownWriteTime" : 1576136662,
+    "last_content_update" : 1576136662,
+    "path" : "~/Desktop/website/content/post/2019-12-12-python.md",
+    "project_path" : "content/post/2019-12-12-python.md",
+    "properties" : {
+        "cursorPosition" : "8,15",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 9,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "markdown"
+}
