@@ -16,7 +16,7 @@ Many companies use this versatile language since it is so well-structured.
 
 Here are some examples of how Python can be used. 
 
-In a long list, Python allows specific entries to be selected easily. H
+In a long list, Python allows specific entries to be selected easily. 
 ```{python}
 list1= ["a", "b","c","d"] 
 list1[2]
