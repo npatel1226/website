@@ -22,8 +22,11 @@ list1= ["a", "b","c","d"]
 list1[2]
 list1 [-1]
 list1 [2:]
+```
 
-You can also match  and pull them from the following string (string1). 
+You can also match  and pull them from the following string (string1).
+
+```{python}
 ['12',
  '47',
  '48',
@@ -43,5 +46,7 @@ string1="We have to extract these numbers 12, 47, 48 The integers numbers are al
 print(string1)
 
 re.findall(r"[0-9]+",string1)
+```
 
 ![Python is a high level programming language](/blog/2019-12-12-python_files/do-python-coding-and-jenkins-setup.png.jpeg)
+
