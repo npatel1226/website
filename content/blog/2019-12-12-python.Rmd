@@ -14,6 +14,8 @@ Python is a very functional and easy language to use once you get familar to the
 
 Many companies use this versatile language since it is so well-structured. 
 
+![Python is a high level programming language](/blog/2019-12-12-python_files/do-python-coding-and-jenkins-setup.png.jpeg)
+
 Here are some examples of how Python can be used. 
 
 In a long list, Python allows specific entries to be selected easily. 
@@ -39,14 +41,13 @@ You can also match  and pull them from the following string (string1).
  '564',
  '90456',
  '7890']
-In [1]:
+
 import re
 
-string1="We have to extract these numbers 12, 47, 48 The integers numbers are also interesting: 189 2036 314\',\' is a separator, so please extract these numbers 125,789,1450 and also these 564,90456 
+string1="We have to extract these numbers 12, 47, 48 The integers numbers are also interesting: 189 2036 314\',\' is a separator, so please extract these numbers 125,789,1450 and also these 564,90456"
 print(string1)
 
 re.findall(r"[0-9]+",string1)
 ```
 
-![Python is a high level programming language](/blog/2019-12-12-python_files/do-python-coding-and-jenkins-setup.png.jpeg)
 

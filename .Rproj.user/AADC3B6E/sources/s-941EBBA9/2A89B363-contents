@@ -17,3 +17,33 @@ description: ''
 <img src="/blog/2019-12-12-python_files/do-python-coding-and-jenkins-setup.png.jpeg" alt="Python is a high level programming language" />
 <p class="caption">Python is a high level programming language</p>
 </div>
+<p>Here are some examples of how Python can be used.</p>
+<p>In a long list, Python allows specific entries to be selected easily.</p>
+<pre class="python"><code>list1= [&quot;a&quot;, &quot;b&quot;,&quot;c&quot;,&quot;d&quot;] 
+list1[2]</code></pre>
+<pre><code>## &#39;c&#39;</code></pre>
+<pre class="python"><code>list1 [-1]</code></pre>
+<pre><code>## &#39;d&#39;</code></pre>
+<pre class="python"><code>list1 [2:]</code></pre>
+<pre><code>## [&#39;c&#39;, &#39;d&#39;]</code></pre>
+<p>You can also match and pull them from the following string (string1).</p>
+<pre class="python"><code>[&#39;12&#39;,
+ &#39;47&#39;,
+ &#39;48&#39;,
+ &#39;189&#39;,
+ &#39;2036&#39;,
+ &#39;314&#39;,
+ &#39;125&#39;,
+ &#39;789&#39;,
+ &#39;1450&#39;,
+ &#39;564&#39;,
+ &#39;90456&#39;,
+ &#39;7890&#39;]</code></pre>
+<pre><code>## [&#39;12&#39;, &#39;47&#39;, &#39;48&#39;, &#39;189&#39;, &#39;2036&#39;, &#39;314&#39;, &#39;125&#39;, &#39;789&#39;, &#39;1450&#39;, &#39;564&#39;, &#39;90456&#39;, &#39;7890&#39;]</code></pre>
+<pre class="python"><code>import re
+
+string1=&quot;We have to extract these numbers 12, 47, 48 The integers numbers are also interesting: 189 2036 314\&#39;,\&#39; is a separator, so please extract these numbers 125,789,1450 and also these 564,90456&quot;
+print(string1)</code></pre>
+<pre><code>## We have to extract these numbers 12, 47, 48 The integers numbers are also interesting: 189 2036 314&#39;,&#39; is a separator, so please extract these numbers 125,789,1450 and also these 564,90456</code></pre>
+<pre class="python"><code>re.findall(r&quot;[0-9]+&quot;,string1)</code></pre>
+<pre><code>## [&#39;12&#39;, &#39;47&#39;, &#39;48&#39;, &#39;189&#39;, &#39;2036&#39;, &#39;314&#39;, &#39;125&#39;, &#39;789&#39;, &#39;1450&#39;, &#39;564&#39;, &#39;90456&#39;]</code></pre>
